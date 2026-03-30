@@ -1,0 +1,111 @@
+---
+# migrate.yml
+# Generic database migration runner for omni-ns.
+#
+# Discovers SQL scripts in database/<major>/<from>-<to>-*.sql and applies
+# any that haven't been run yet, in order, inside a single transaction
+# per major version so that the version record and schema changes commit
+# atomically.
+#
+# Version tracking:
+#   major_version = folder name (e.g. "0.0.1")
+#   minor_version = the <to> number from the last applied script
+#   e.g. after running 000-001 and 001-002 the version is 0.0.1.2
+#
+# Usage:
+#   ansible-playbook migrate.yml -i inventory.ini \
+#     --extra-vars "db_password=secret"
+#
+# Optional overrides:
+#   db_name       (default: omni_ns)
+#   db_user       (default: omni_ns)
+#   db_host       (default: localhost)
+#   db_port       (default: 5432)
+#   database_dir  (default: database)
+
+- name: Run omni-ns database migrations
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  #become: true
+  #become_user: postgres
+  module_defaults:
+    group/community.postgresql.all:
+      login_host: "{{ db_host }}"
+      login_port: "{{ db_port }}"
+      login_user: "{{ db_user }}"
+      login_password: "{{ db_password }}"
+
+  vars:
+    db_name: "example"
+    db_user: "postgres"
+    db_host: "localhost"
+    db_port: 5432
+    version_dir: "version"
+    
+  pre_tasks:
+    - name: Validate required variables
+      ansible.builtin.assert:
+        that:
+          - db_password is defined
+          - db_password | length > 0
+        fail_msg: "db_password must be set."
+
+  tasks:
+    # ── Ensure database exists ──────────────────────────────────────────
+    - name: Create database if it does not exist
+      community.postgresql.postgresql_db:
+        name: "{{ db_name }}"
+        owner: "{{ db_user }}"
+        encoding: UTF-8
+        state: present
+
+    # ── Bootstrap schema_versions if missing ────────────────────────────
+    - name: Check if schema_versions table exists
+      community.postgresql.postgresql_query:
+        db: "{{ db_name }}"
+        query: |
+          SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_name = 'schema_versions'
+          ) AS exists;
+      register: sv_check
+
+    - name: Bootstrap schema_versions table
+      community.postgresql.postgresql_query:
+        db: "{{ db_name }}"
+        query: |
+          CREATE TABLE IF NOT EXISTS schema_versions (
+              id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+              major_version   TEXT        NOT NULL,
+              minor_version   INTEGER     NOT NULL,
+              description     TEXT,
+              applied_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+      when: not sv_check.query_result[0].exists
+
+    # ── Discover major versions ─────────────────────────────────────────
+    - name: Find major version directories
+      ansible.builtin.find:
+        paths: "{{ playbook_dir }}/{{ version_dir }}"
+        file_type: directory
+      register: major_dirs
+      delegate_to: localhost
+      become: false
+
+    - name: Sort major versions
+      ansible.builtin.set_fact:
+        sorted_majors: "{{ major_dirs.files | map(attribute='path') | map('basename') | sort | list }}"
+
+    # ── Process each major version ──────────────────────────────────────
+    - name: Process major version
+      ansible.builtin.include_tasks: _apply_major.yml
+      loop: "{{ sorted_majors }}"
+      loop_control:
+        loop_var: major_version
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Included task file: _apply_major.yml
+# Handles discovery + application for one major version directory.
+# ═══════════════════════════════════════════════════════════════════════════
