@@ -56,4 +56,4 @@ version/
 └── schema
     └── 0.0.0
 ```
-if the folder name didnt match a regex like `\d.\d.\d` and had a folder that did under it; it was a schema.
+if the folder name didnt match a regex like `\d+\.\d+\.\d+` and had a folder that did under it; it was a schema.
