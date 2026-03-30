@@ -45,3 +45,15 @@ How to run.
 ansible-playbook migrate.yml --extra-vars db_password=password
 ```
 
+## Notes
+
+The OG version had support for schemas but i did not care to implement them right now... i might regret it later, but no one used it and it was later removed.
+It looked like this.
+```
+version/
+├── 0.0.0
+│   └── 000-001-create-version-table.sql
+└── schema
+    └── 0.0.0
+```
+
