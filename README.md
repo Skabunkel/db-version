@@ -14,20 +14,19 @@ Inside the version folder there are files with this structure `xxx-yyy-name.sql`
 version/
 ├── 0.0.0
 │   ├── 000-001-asdasasdasd.sql
-│   └── 000-001-create-version-table.sql
+│   └── 001-002-create-stuff-table.sql
 ├── goober
 └── goober2
     └── 0.0.0
         └── 000-001-asdasasdasd.sql
 ```
 
-In the example above it creates the initial version `0.0.0.1` which contains the schema version table, then it applies the patches for version `0.0.1` 
-this database would have records for version `0.0.0` with patch `1`, `0.0.1` with patch `1`.
+In the example above it creates the initial version `0.0.0.2` which contains the schema version table, then it applies the patches for version `0.0.1` 
+this database would have records for version `0.0.0` with patch `2`, `0.0.2` with patch `2`.
 
-This version now supports the creation of schema and will write the sql into a schema if the folder has a version folder in it.
+It will the go on and create the schema `goober2` with version `0.0.0.1`, it will not create schema `goober` because it does not have a version folder.
 
-Schemas are manage by setting search_path on the runner ansible statment, meaning you dont need to set it in scripts.
-
+the idea is that folder `0.0.0` is going to not be updated once `0.0.1` is created, this version will skip scripts based on what is in the database. 
 
 ## Getting started
 
