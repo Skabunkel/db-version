@@ -12,7 +12,7 @@ function Apply-Versions {
     }
 
     Push-Location $Path;
-    $versions = Get-ChildItem -Directory | Where-Object { $_.Name -match '\d+\.\d+\.\d+' };
+    $versions = Get-ChildItem -Directory | Where-Object { $_.Name -match '\d+\.\d+\.\d+' }; # Need to add sorting here.
     foreach ($version in $versions) {
         Push-Location $version.Name
         $tran = $connection.BeginTransaction();
