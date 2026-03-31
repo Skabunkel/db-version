@@ -1,7 +1,7 @@
 # db-version ansible
 This is a variant of how db versioning was at a job i was at, i like it alot in many cases since you can roll forward. 
 
-I vibed this since i was a bit miffed, looking at the output it looks fine for now... i dont have to many version yet. 
+This is no longer vibecoded.
 
 This repository is supposed to be copied into another repo, im just keeping a clean copy here.
 
