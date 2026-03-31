@@ -13,15 +13,20 @@ Inside the version folder there are files with this structure `xxx-yyy-name.sql`
 ```
 version/
 ├── 0.0.0
+│   ├── 000-001-asdasasdasd.sql
 │   └── 000-001-create-version-table.sql
-└── 0.0.1
-    └── 000-001-example.sql
+├── goober
+└── goober2
+    └── 0.0.0
+        └── 000-001-asdasasdasd.sql
 ```
 
 In the example above it creates the initial version `0.0.0.1` which contains the schema version table, then it applies the patches for version `0.0.1` 
 this database would have records for version `0.0.0` with patch `1`, `0.0.1` with patch `1`.
 
-I called `patch` `minor` when i told claude my idea so its incorrect in the table... but meh. 
+This version now supports the creation of schema and will write the sql into a schema if the folder has a version folder in it.
+
+Schemas are manage by setting search_path on the runner ansible statment, meaning you dont need to set it in scripts.
 
 
 ## Getting started
@@ -45,15 +50,3 @@ How to run.
 ansible-playbook main.yml --extra-vars db_password=password
 ```
 
-## Notes
-
-The OG version had support for schemas but i did not care to implement them right now... i might regret it later, but no one used it and it was later removed.
-It looked like this.
-```
-version/
-├── 0.0.0
-│   └── 000-001-create-version-table.sql
-└── schema
-    └── 0.0.0
-```
-if the folder name didnt match a regex like `\d+\.\d+\.\d+` and had a folder that did under it; it was a schema.
