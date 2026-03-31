@@ -1,0 +1,39 @@
+- name: "({{schema}}) schema variable"
+  ansible.builtin.assert:
+    that:
+      - schema_folder is defined
+      - schema_folder | length > 0
+
+      - schema is defined
+      - schema | length > 0
+    fail_msg: "'schema_folder', 'schema' variables must be set."
+
+- name: "({{schema}}) Find version directories"
+  ansible.builtin.find:
+      paths: "{{ schema_folder }}"
+      file_type: directory
+  delegate_to: localhost
+  register: directories
+
+- name: "({{schema}}) filter schemas and public versions"
+  ansible.builtin.set_fact:
+    versions: "{{ directories.files | map(attribute='path')| select('match', '.*\\d+\\.\\d+\\.\\d+.*') | community.general.version_sort | list }}"
+  
+- name: "({{schema}}) Return early if no SQL files found"
+  when: versions | length != 0
+  block:
+    - name: "({{schema}}) Create schema"
+      community.postgresql.postgresql_schema:
+        name:   "{{ schema }}"
+        state:  present
+
+    - name: "({{schema}}) Apply versions to schema."
+      ansible.builtin.include_tasks:
+        file: apply_version.yml
+      vars:
+        db_schema: "{{ schema }}"
+        version: "{{ current_version | basename }}"
+        folder: "{{ current_version }}"
+      loop: "{{ versions }}"
+      loop_control:
+        loop_var: current_version

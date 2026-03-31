@@ -1,0 +1,85 @@
+---
+- name: Run omni-ns database migrations
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  any_errors_fatal: true
+  module_defaults:
+    group/community.postgresql.all:
+      login_host: "{{ db_host }}"
+      login_port: "{{ db_port }}"
+      login_user: "{{ db_user }}"
+      login_password: "{{ db_password }}"
+      db: "{{ db_name }}"
+  vars_files:
+  - ./.vars.yml
+  
+  pre_tasks:
+  - name: Validate required variables
+    ansible.builtin.assert:
+      that:
+        - db_password is defined
+        - db_password | length > 0
+      fail_msg: "db_password must be set."
+
+  - name: Validate required variables
+    ansible.builtin.assert:
+      that:
+        - db_host is defined
+        - db_host | length > 0
+      fail_msg: "db_host must be set."
+  
+  - name: Validate required variables
+    ansible.builtin.assert:
+      that:
+        - db_port is defined
+        - db_port != 0
+      fail_msg: "db_port must be set."
+ 
+  - name: Validate required variables
+    ansible.builtin.assert:
+      that:
+        - db_user is defined
+        - db_user | length > 0
+      fail_msg: "db_user must be set."
+  
+  tasks:
+  - name: Find major version directories
+    ansible.builtin.find:
+      paths: "{{ playbook_dir }}/{{ version_dir }}"
+      file_type: directory
+    delegate_to: localhost
+    register: directories
+
+  - name: filter schemas and public versions
+    ansible.builtin.set_fact:
+      versions: "{{ directories.files | map(attribute='path')| select('match', '.*\\d+\\.\\d+\\.\\d+.*') | community.general.version_sort | list }}"
+      schemas: "{{ directories.files | map(attribute='path')| reject('match', '.*\\d+\\.\\d+\\.\\d+.*') | list }}"
+
+  - name: Create database if it does not exist
+    community.postgresql.postgresql_db:
+      name: "{{ db_name }}"
+      owner: "{{ db_user }}"
+      encoding: UTF-8
+      state: present
+    
+  - name: Apply versions to public schema.
+    ansible.builtin.include_tasks:
+      file: mods/apply_version.yml
+    vars:
+      db_schema: "public"
+      version: "{{ current_version | basename }}"
+      folder: "{{ current_version }}"
+    loop: "{{ versions }}"
+    loop_control:
+      loop_var: current_version
+  
+  - name: Create and setup schemas.
+    ansible.builtin.include_tasks:
+      file: mods/apply_schema.yml
+    vars:
+      schema: "{{ schema_folder | basename }}"
+      schema_folder: "{{ current_folder }}"
+    loop: "{{ schemas }}"
+    loop_control:
+      loop_var: current_folder

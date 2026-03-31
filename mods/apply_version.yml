@@ -1,0 +1,109 @@
+- name: "({{db_schema}}) {{version}}  variable"
+  ansible.builtin.assert:
+    that:
+      - db_schema is defined
+      - db_schema | length > 0
+
+      - version is defined
+      - version | length > 0
+      - version is match('\\d+\\.\\d+\\.\\d+')
+      
+      - folder is defined
+      - folder | length > 0
+    fail_msg: "'db_schema', 'version' and 'folder' variables must be set."
+
+- name: "({{db_schema}}) {{version}} getting patches."
+  ansible.builtin.find:
+    paths: "{{ folder }}"
+    file_type: file
+    patterns: "*.sql"
+  delegate_to: localhost
+  register: patches
+
+- name: "({{db_schema}}) {{version}} Checking version patches."
+  block:
+    - ansible.builtin.assert:
+        that:
+        - patches is defined
+        - patches.files | length != 0
+
+  rescue:
+    - name: Abort
+      ansible.builtin.fail:
+        msg: "No patches detected inside folder:'{{ folder }}'"
+
+- name: "({{db_schema}}) {{version}} Setting up variable."
+  ansible.builtin.set_fact:
+    prev_number: 0
+    sorted_patches: "{{ patches.files | map(attribute='path') | sort | list }}"
+
+# ===========================================================
+#   Start setting up tables.
+# ===========================================================
+
+- name: "({{db_schema}}) {{version}} check if schema_version table exists."
+  community.postgresql.postgresql_query:
+    query: "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '{{db_schema}}' AND table_name = 'schema_versions') AS exists;"
+  register: sv_check
+
+- name: Bootstrap schema_versions table
+  community.postgresql.postgresql_query:
+    search_path: "{{ db_schema }}"
+    query: |
+      CREATE TABLE IF NOT EXISTS schema_versions (
+          revision        TEXT        NOT NULL PRIMARY KEY,
+          patch           INTEGER     NOT NULL,
+          description     TEXT,
+          updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+  when: not sv_check.query_result[0].exists
+
+- name: "({{db_schema}}) {{version}} Validate patch name structure."
+  ansible.builtin.assert:
+    that:
+      - item | basename is match('^\d{3}-\d{3}-.+\.sql$')
+      - item | basename | regex_findall('(\\d{3})') | last | int == item | basename | regex_findall('(\\d{3})') | first | int + 1
+    fail_msg: "Invalid filename structure: {{ item }}"
+  loop: "{{ sorted_patches }}"
+
+- name: "({{db_schema}}) {{version}} Extract first numbers from patches."
+  ansible.builtin.set_fact:
+    patch_numbers: "{{ sorted_patches | map('basename') | map('regex_findall', '(\\d{3})') | map('first') | map('int') | list }}"
+
+- name: Validate patches are sequential across files
+  ansible.builtin.assert:
+    that:
+      - patch_numbers[idx | int] == patch_numbers[idx | int - 1] + 1
+    fail_msg: "Patch {{ sorted_patches[idx | int] | basename }} is out of sequence."
+  loop: "{{ range(1, patch_numbers | length) | list }}"
+  loop_control:
+    loop_var: idx
+
+# ===========================================================
+#   Figgure out what patches to run.
+# ===========================================================
+
+- name: "({{db_schema}}) {{version}} Get version that has been applied."
+  community.postgresql.postgresql_query:
+    search_path: "{{ db_schema }}"
+    query: |
+      SELECT patch FROM schema_versions WHERE revision=%(version)s
+    named_args:
+      version: "{{ version }}"
+  register: version_result
+
+- name: "({{db_schema}}) {{version}} Set current patch number var."
+  ansible.builtin.set_fact:
+    current_patch: "{{ version_result.query_result[0].patch | default(0) | int }}"
+
+- name: "({{db_schema}}) {{version}} Apply patches."
+  ansible.builtin.include_tasks:
+    file: apply_patch.yml
+  vars:
+      first_number: "{{ current_patch | basename | regex_findall('(\\d{3})') | first | int }}"
+      second_number: "{{ current_patch | basename | regex_findall('(\\d{3})') | last | int }}"
+      sql_file: "{{ current_patch | basename }}"
+      file_path: "{{ current_patch }}"
+  loop: "{{ sorted_patches[current_patch|int:] }}"
+  loop_control:
+    loop_var: current_patch
