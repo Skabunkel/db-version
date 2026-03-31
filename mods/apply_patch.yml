@@ -35,10 +35,8 @@
   community.postgresql.postgresql_query:
     search_path: "{{ db_schema }}"
     query: |
-      BEGIN;
-
       {{ sql_contents.content | b64decode }};
-      
+
       INSERT INTO schema_versions (revision, patch, description)
       VALUES (%(revision)s, %(patch)s, %(description)s)
       ON CONFLICT (revision)
@@ -46,8 +44,6 @@
           patch       = EXCLUDED.patch,
           description = EXCLUDED.description,
           updated_at  = NOW();
-      
-      COMMIT;
     named_args:
       revision:    "{{ version }}"
       patch:       "{{ second_number }}"
