@@ -36,7 +36,7 @@ pip install psycopg2
 ```
 
 ## What do i need to change?
-the vars in `migrate.yml`
+the vars in `.vars.yml`
 ```
 db_name: "example"
 db_user: "postgres"
