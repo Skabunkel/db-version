@@ -42,7 +42,7 @@ db_port: 5432
 ## How do i use it.
 How to run.
 ```
-ansible-playbook migrate.yml --extra-vars db_password=password
+ansible-playbook main.yml --extra-vars db_password=password
 ```
 
 ## Notes
