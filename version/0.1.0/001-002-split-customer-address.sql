@@ -1,0 +1,12 @@
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS street VARCHAR(300);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS city VARCHAR(100);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(100);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS country VARCHAR(100);
+
+UPDATE customers
+SET street  = address,
+    country = 'Unknown'
+WHERE street IS NULL AND address IS NOT NULL;
+
+ALTER TABLE customers DROP COLUMN address;

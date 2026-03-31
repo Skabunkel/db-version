@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS customers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(300) NOT NULL,
+    email VARCHAR(300) NOT NULL UNIQUE,
+    phone VARCHAR(50),
+    address TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
