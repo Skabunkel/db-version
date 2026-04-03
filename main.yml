@@ -1,5 +1,5 @@
 ---
-- name: Run omni-ns database migrations
+- name: Run database migrations
   hosts: localhost
   connection: local
   gather_facts: false
