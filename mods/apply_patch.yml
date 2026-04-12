@@ -35,7 +35,7 @@
   community.postgresql.postgresql_query:
     search_path: "{{ db_schema }}"
     query: |
-      {{ sql_contents.content | b64decode }};
+      {{ sql_contents.content | b64decode | replace('%', '%%') }};
 
       INSERT INTO schema_versions (revision, patch, description)
       VALUES (%(revision)s, %(patch)s, %(description)s)
