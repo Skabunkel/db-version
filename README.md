@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS orders (
 
 ### 5. Using variables in SQL
 
-SQL files are rendered as Jinja templates, so any variable from `.vars.yml` (or `--extra-vars`) is available. Use `{{ var }}` for substitution, and escape literal `%` as `%%`.
+SQL files are rendered as Jinja templates, so any variable from `.vars.yml` (or `--extra-vars`) is available. Use `{{ var }}` for substitution.
 
 `.vars.yml`:
 
