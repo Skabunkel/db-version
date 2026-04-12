@@ -96,6 +96,11 @@
   ansible.builtin.set_fact:
     current_patch: "{{ version_result.query_result[0].patch | default(0) | int }}"
 
+- name: "({{db_schema}}) {{version}} Setting up variable."
+  ansible.builtin.set_fact:
+    prev_number: "{{ current_patch | int }}"
+    sorted_patches: "{{ patches.files | map(attribute='path') | sort | list }}"
+
 - name: "({{db_schema}}) {{version}} Apply patches."
   ansible.builtin.include_tasks:
     file: apply_patch.yml
