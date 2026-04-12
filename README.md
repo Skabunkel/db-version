@@ -44,7 +44,7 @@ db_host: "localhost"
 db_port: 5432
 ```
 
-Then add your SQL files under `version/<schema>/<version>/`.
+Then add your SQL files under `version/<version>/` or on a schema `version/<schema>/<version>/`.
 
 ## How do i use it.
 
