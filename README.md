@@ -26,6 +26,9 @@ Once a version folder (e.g. `0.0.0`) is released, don't modify it — create a n
 Install the Postgres driver:
 
 ```
+# psycopg version 3
+pip install "psycopg[binary]"
+# or, version 2:
 pip install psycopg2
 # or, for prebuilt binaries:
 pip install psycopg2-binary
