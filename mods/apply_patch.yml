@@ -26,9 +26,11 @@
   delegate_to: localhost
 
 - name: "({{db_schema}}) {{version}} Patch:'{{sql_file}}' Fail if SQL file is empty."
-  ansible.builtin.fail:
-    msg: "SQL file '{{ sql_file }}' is empty."
-  when: sql_rendered | trim == ''
+  ansible.builtin.assert:
+    that:
+      - sql_rendered is defined
+      - sql_rendered | trim | length > 0
+    fail_msg: "Sql file is empty."
 
 - name: "({{db_schema}}) {{version}} Patch:'{{sql_file}}' Execute sql."
   community.postgresql.postgresql_query:
