@@ -21,21 +21,20 @@
     prev_number: "{{ second_number }}"
 
 - name: "({{db_schema}}) {{version}} Patch:'{{sql_file}}' read file."
-  ansible.builtin.slurp:
-    src: "{{ file_path }}"
-  register: sql_contents
+  ansible.builtin.set_fact:
+    sql_rendered: "{{ lookup('template', file_path) }}"
   delegate_to: localhost
 
 - name: "({{db_schema}}) {{version}} Patch:'{{sql_file}}' Fail if SQL file is empty."
   ansible.builtin.fail:
     msg: "SQL file '{{ sql_file }}' is empty."
-  when: sql_contents.content | b64decode | trim == ''
+  when: sql_rendered | trim == ''
 
 - name: "({{db_schema}}) {{version}} Patch:'{{sql_file}}' Execute sql."
   community.postgresql.postgresql_query:
     search_path: "{{ db_schema }}"
     query: |
-      {{ sql_contents.content | b64decode | replace('%', '%%') }};
+      {{ sql_rendered | replace('%', '%%') }};
 
       INSERT INTO schema_versions (revision, patch, description)
       VALUES (%(revision)s, %(patch)s, %(description)s)
