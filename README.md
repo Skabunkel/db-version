@@ -142,4 +142,4 @@ ansible-playbook main.yml --extra-vars "db_password=secret app_owner=reporting_u
 - Filenames must be sequential: `000-001`, `001-002`, `002-003`, ... — the next file's first number must match the previous file's second number.
 - Never edit a released version folder. Create a new one.
 - Every SQL file must be non-empty.
-- `{{ ... }}` is interpreted as Jinja2 — escape literal `%` as `%%`.
+- `{{ ... }}` is interpreted as Jinja2 template — escape literal `%` as `%%`.
